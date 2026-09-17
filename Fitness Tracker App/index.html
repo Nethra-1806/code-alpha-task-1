@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PulseFit - Creative Fitness Tracker</title>
+  <meta name="description" content="A creative, modern, and aesthetic fitness tracking application with activity rings, MET calorie calculation, interval timer, and gamification." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- Lucide Icons & Chart.js via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Canvas for celebratory confetti bursts -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+
+    <!-- Top Sticky Header -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="flame"></i>
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <h1 class="brand-title">PulseFit</h1>
+            <span class="brand-badge">PRO</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-controls">
+        <!-- Streak Counter -->
+        <div class="streak-pill" id="streak-pill" title="Current Daily Active Streak">
+          <span>🔥</span>
+          <span id="streak-count">0</span>
+          <span style="font-size: 0.75rem; font-weight: 600; opacity: 0.85;">DAYS</span>
+        </div>
+
+        <!-- Audio Toggle -->
+        <button class="icon-btn" id="sound-toggle-btn" title="Toggle Sound Effects">
+          <i data-lucide="volume-2"></i>
+        </button>
+
+        <!-- Theme Switcher -->
+        <button class="icon-btn" id="theme-toggle-btn" title="Switch Theme (Dark / Light / Cyber)">
+          <i data-lucide="sun"></i>
+        </button>
+
+        <!-- Quick Log Button -->
+        <button class="btn btn-glow btn-sm" id="quick-log-btn">
+          <i data-lucide="plus"></i>
+          <span>Log Activity</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="tab-navigation">
+      <button class="nav-tab active" data-tab="dashboard">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-tab" data-tab="analytics">
+        <i data-lucide="bar-chart-3"></i>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-tab" data-tab="timer">
+        <i data-lucide="timer"></i>
+        <span>Workout Timer</span>
+      </button>
+      <button class="nav-tab" data-tab="achievements">
+        <i data-lucide="trophy"></i>
+        <span>Achievements</span>
+      </button>
+      <button class="nav-tab" data-tab="profile">
+        <i data-lucide="user-cog"></i>
+        <span>Profile & Data</span>
+      </button>
+    </nav>
+
+    <!-- =====================================================================
+         TAB 1: DASHBOARD
+         ===================================================================== -->
+    <section id="view-dashboard" class="view-section active">
+
+      <!-- AI Coach / Motivational Banner -->
+      <div class="coach-banner">
+        <div class="coach-icon">
+          <i data-lucide="sparkles"></i>
+        </div>
+        <div class="coach-text">
+          <h4 class="coach-title" id="coach-title">Daily Motivation</h4>
+          <p class="coach-quote" id="coach-quote">"Your only limit is you. Let's make every single move count today!"</p>
+        </div>
+      </div>
+
+      <!-- Top Dashboard Grid: Concentric Rings + Metric Cards -->
+      <div class="grid-2" style="margin-bottom: 1.5rem;">
+        
+        <!-- Activity Rings Card -->
+        <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div class="card-header" style="width: 100%;">
+            <div>
+              <h3 class="card-title">
+                <i data-lucide="activity" style="color: var(--color-calories);"></i>
+                Daily Activity Rings
+              </h3>
+              <p class="card-subtitle">Move, Exercise & Step Targets</p>
+            </div>
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">TODAY</span>
+          </div>
+
+          <div class="rings-container">
+            <div class="rings-svg-wrap">
+              <svg class="rings-svg" viewBox="0 0 220 220">
+                <defs>
+                  <!-- Calorie Gradient -->
+                  <linearGradient id="calGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ff3366" />
+                    <stop offset="100%" stop-color="#ff758c" />
+                  </linearGradient>
+                  <!-- Exercise Gradient -->
+                  <linearGradient id="exGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00f2fe" />
+                    <stop offset="100%" stop-color="#4facfe" />
+                  </linearGradient>
+                  <!-- Steps Gradient -->
+                  <linearGradient id="stepGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#10b981" />
+                    <stop offset="100%" stop-color="#34d399" />
+                  </linearGradient>
+                </defs>
+
+                <!-- Calorie Ring (Outer: r=98) -->
+                <circle class="ring-bg" cx="110" cy="110" r="98" stroke="var(--color-calories)" />
+                <circle id="ring-calories" class="ring-progress" cx="110" cy="110" r="98" stroke="url(#calGrad)" stroke-dasharray="615" stroke-dashoffset="615" />
+
+                <!-- Exercise Ring (Middle: r=78) -->
+                <circle class="ring-bg" cx="110" cy="110" r="78" stroke="var(--color-exercise)" />
+                <circle id="ring-minutes" class="ring-progress" cx="110" cy="110" r="78" stroke="url(#exGrad)" stroke-dasharray="490" stroke-dashoffset="490" />
+
+                <!-- Steps Ring (Inner: r=58) -->
+                <circle class="ring-bg" cx="110" cy="110" r="58" stroke="var(--color-steps)" />
+                <circle id="ring-steps" class="ring-progress" cx="110" cy="110" r="58" stroke="url(#stepGrad)" stroke-dasharray="364" stroke-dashoffset="364" />
+              </svg>
+
+              <!-- Rings Center Info -->
+              <div class="rings-center-info">
+                <div class="rings-center-percent" id="rings-center-pct">0%</div>
+                <div class="rings-center-sub">Completed</div>
+              </div>
+            </div>
+
+            <!-- Rings Legend -->
+            <div class="rings-legend">
+              <div class="legend-item">
+                <span class="legend-dot" style="background: var(--color-calories); box-shadow: 0 0 8px var(--color-calories);"></span>
+                <span>Calories</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background: var(--color-exercise); box-shadow: 0 0 8px var(--color-exercise);"></span>
+                <span>Exercise</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background: var(--color-steps); box-shadow: 0 0 8px var(--color-steps);"></span>
+                <span>Steps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Metric Cards Grid -->
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          
+          <div class="grid-2">
+            <!-- Metric 1: Calories -->
+            <div class="metric-card">
+              <div class="metric-top">
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">ACTIVE ENERGY</span>
+                <div class="metric-icon-box" style="background: rgba(255, 51, 102, 0.15); color: var(--color-calories);">
+                  <i data-lucide="zap"></i>
+                </div>
+              </div>
+              <div>
+                <span class="metric-value" id="dash-calories" style="color: var(--color-calories);">0</span>
+                <span class="metric-unit">kcal</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div id="bar-calories" class="progress-bar-fill" style="background: linear-gradient(90deg, #ff3366, #ff758c); width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Metric 2: Exercise Minutes -->
+            <div class="metric-card">
+              <div class="metric-top">
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">EXERCISE TIME</span>
+                <div class="metric-icon-box" style="background: rgba(0, 242, 254, 0.15); color: var(--color-exercise);">
+                  <i data-lucide="timer"></i>
+                </div>
+              </div>
+              <div>
+                <span class="metric-value" id="dash-minutes" style="color: var(--color-exercise);">0</span>
+                <span class="metric-unit">mins</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div id="bar-minutes" class="progress-bar-fill" style="background: linear-gradient(90deg, #00f2fe, #4facfe); width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <!-- Metric 3: Steps & Distance -->
+            <div class="metric-card">
+              <div class="metric-top">
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">DAILY STEPS</span>
+                <div class="metric-icon-box" style="background: rgba(16, 185, 129, 0.15); color: var(--color-steps);">
+                  <i data-lucide="footprints"></i>
+                </div>
+              </div>
+              <div class="flex-between">
+                <div>
+                  <span class="metric-value" id="dash-steps" style="color: var(--color-steps);">0</span>
+                  <span class="metric-unit">steps</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="quick-add-steps-btn" title="Quick add steps">
+                  <i data-lucide="plus"></i> Add
+                </button>
+              </div>
+              <div class="metric-target">Distance: <strong id="dash-dist">0.0</strong> km</div>
+              <div class="progress-bar-wrap">
+                <div id="bar-steps" class="progress-bar-fill" style="background: linear-gradient(90deg, #10b981, #34d399); width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Metric 4: Hydration -->
+            <div class="metric-card">
+              <div class="metric-top">
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">WATER INTAKE</span>
+                <div class="metric-icon-box" style="background: rgba(59, 130, 246, 0.15); color: var(--color-water);">
+                  <i data-lucide="droplet"></i>
+                </div>
+              </div>
+              <div>
+                <span class="metric-value" id="dash-water" style="color: var(--color-water);">0.00</span>
+                <span class="metric-unit">Liters</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div id="bar-water" class="progress-bar-fill" style="background: linear-gradient(90deg, #3b82f6, #60a5fa); width: 0%;"></div>
+              </div>
+              <!-- Hydration quick taps -->
+              <div class="quick-hydration" style="margin-top: 0.6rem; padding: 0.4rem 0.6rem;">
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Quick Sip:</span>
+                <div class="hydration-actions">
+                  <button class="btn-water" id="water-add-250">+250ml</button>
+                  <button class="btn-water" id="water-add-500">+500ml</button>
+                  <button class="btn-water" id="water-reset" style="opacity: 0.6;" title="Reset water">↺</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Today's Logged Activities Section -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">
+              <i data-lucide="dumbbell"></i>
+              Today's Workouts & Activities
+            </h3>
+            <p class="card-subtitle">Real-time session records and calorie burn</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="window.pulseFit.openActivityModal()">
+            <i data-lucide="plus"></i> Add Workout
+          </button>
+        </div>
+
+        <div id="today-activities-list" class="activity-list">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- =====================================================================
+         TAB 2: ANALYTICS & TRENDS
+         ===================================================================== -->
+    <section id="view-analytics" class="view-section">
+      
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">
+              <i data-lucide="trending-up" style="color: var(--color-calories);"></i>
+              Active Energy Trends
+            </h3>
+            <p class="card-subtitle">Daily calories burned vs daily goal</p>
+          </div>
+          <div class="chart-period-tabs">
+            <button class="period-tab active" data-days="7">7 Days</button>
+            <button class="period-tab" data-days="14">14 Days</button>
+            <button class="period-tab" data-days="30">30 Days</button>
+          </div>
+        </div>
+
+        <div class="chart-wrapper">
+          <canvas id="calorie-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Steps Chart -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">
+                <i data-lucide="footprints" style="color: var(--color-steps);"></i>
+                Daily Steps Progression
+              </h3>
+              <p class="card-subtitle">Step count consistency</p>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="step-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Activity Distribution Donut Chart -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">
+                <i data-lucide="pie-chart" style="color: var(--color-exercise);"></i>
+                Workout Category Split
+              </h3>
+              <p class="card-subtitle">Cardio vs Strength vs HIIT vs Mobility</p>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="distribution-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- =====================================================================
+         TAB 3: WORKOUT STOPWATCH & HIIT TABATA TIMER
+         ===================================================================== -->
+    <section id="view-timer" class="view-section">
+      
+      <div class="card timer-container">
+        
+        <!-- Mode Switcher -->
+        <div class="timer-mode-pills">
+          <button class="mode-pill active" data-mode="stopwatch">Stopwatch</button>
+          <button class="mode-pill" data-mode="hiit">HIIT / Tabata</button>
+        </div>
+
+        <!-- Phase & Round Indicators -->
+        <div>
+          <span class="timer-phase-badge phase-work" id="timer-phase">STOPWATCH</span>
+          <div id="timer-round-info" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.25rem;">
+            Active Elapsed Time
+          </div>
+        </div>
+
+        <!-- Big Display Clock -->
+        <div class="timer-big-display" id="timer-display">
+          00:00
+        </div>
+
+        <!-- Timer Controls (Play, Pause, Reset, Lap) -->
+        <div class="timer-controls">
+          <button class="timer-btn-round timer-btn-secondary" id="timer-btn-reset" title="Reset Timer">
+            <i data-lucide="rotate-ccw"></i>
+          </button>
+
+          <button class="timer-btn-round timer-btn-primary" id="timer-btn-toggle" title="Start / Pause">
+            <i data-lucide="play"></i>
+          </button>
+
+          <button class="timer-btn-round timer-btn-secondary" id="timer-btn-lap" title="Record Lap">
+            <i data-lucide="flag"></i>
+          </button>
+        </div>
+
+        <!-- Finish Workout CTA button -->
+        <div style="margin-top: 1.5rem;">
+          <button class="btn btn-glow" id="timer-log-workout-btn" style="display: none;">
+            <i data-lucide="check-circle"></i> Log Completed Workout
+          </button>
+        </div>
+
+        <!-- HIIT Configuration Panel (Hidden in Stopwatch mode) -->
+        <div id="hiit-config-panel" style="display: none; width: 100%; max-width: 480px; margin-top: 2rem; border-top: 1px solid var(--border-subtle); padding-top: 1.5rem;">
+          <h4 style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--text-secondary);">Tabata Interval Settings</h4>
+          <div class="grid-4" style="text-align: left;">
+            <div class="form-group">
+              <label for="hiit-prep">Prep (s)</label>
+              <input type="number" id="hiit-prep" class="form-control" value="5" min="0" max="60" />
+            </div>
+            <div class="form-group">
+              <label for="hiit-work">Work (s)</label>
+              <input type="number" id="hiit-work" class="form-control" value="30" min="5" max="300" />
+            </div>
+            <div class="form-group">
+              <label for="hiit-rest">Rest (s)</label>
+              <input type="number" id="hiit-rest" class="form-control" value="15" min="5" max="300" />
+            </div>
+            <div class="form-group">
+              <label for="hiit-rounds">Rounds</label>
+              <input type="number" id="hiit-rounds" class="form-control" value="8" min="1" max="50" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Laps List -->
+        <div id="timer-laps-list" style="width: 100%; max-width: 380px; margin-top: 1.5rem; max-height: 160px; overflow-y: auto;"></div>
+
+      </div>
+
+    </section>
+
+    <!-- =====================================================================
+         TAB 4: ACHIEVEMENTS & GAMIFICATION
+         ===================================================================== -->
+    <section id="view-achievements" class="view-section">
+      
+      <!-- Overview Banner -->
+      <div class="grid-3" style="margin-bottom: 1.75rem;">
+        <div class="metric-card" style="text-align: center; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700;">CURRENT STREAK</span>
+          <div style="font-size: 2.4rem; font-weight: 900; color: var(--color-streak); margin: 0.25rem 0;">
+            🔥 <span id="achieve-curr-streak">0</span>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Days Active in a Row</span>
+        </div>
+
+        <div class="metric-card" style="text-align: center; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700;">BEST ALL-TIME STREAK</span>
+          <div style="font-size: 2.4rem; font-weight: 900; color: var(--color-accent); margin: 0.25rem 0;">
+            ⚡ <span id="achieve-best-streak">0</span>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Consecutive Days Record</span>
+        </div>
+
+        <div class="metric-card" style="text-align: center; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700;">BADGES UNLOCKED</span>
+          <div style="font-size: 2.4rem; font-weight: 900; color: var(--color-success); margin: 0.25rem 0;">
+            🏆 <span id="achieve-total-unlocked">0/10</span>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Milestones Accomplished</span>
+        </div>
+      </div>
+
+      <!-- Badges Showcase Grid -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">
+              <i data-lucide="award" style="color: var(--color-streak);"></i>
+              Fitness Milestones & Trophies
+            </h3>
+            <p class="card-subtitle">Keep logging workouts, steps, and water to unlock these badges!</p>
+          </div>
+        </div>
+
+        <div id="badges-container" class="badges-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- =====================================================================
+         TAB 5: PROFILE & DATA MANAGEMENT
+         ===================================================================== -->
+    <section id="view-profile" class="view-section">
+      
+      <div class="grid-2">
+        
+        <!-- Profile & Targets Form -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">
+                <i data-lucide="user"></i>
+                Athlete Profile & Targets
+              </h3>
+              <p class="card-subtitle">Used for precise MET calorie estimation</p>
+            </div>
+          </div>
+
+          <form id="profile-form" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label for="prof-name">Athlete Name</label>
+              <input type="text" id="prof-name" class="form-control" required />
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label for="prof-weight">Body Weight (kg)</label>
+                <input type="number" id="prof-weight" class="form-control" step="0.5" required />
+              </div>
+              <div class="form-group">
+                <label for="prof-height">Height (cm)</label>
+                <input type="number" id="prof-height" class="form-control" required />
+              </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 0.5rem 0;" />
+            <h4 style="font-size: 0.95rem; color: var(--text-secondary);">Daily Activity Ring Targets</h4>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label for="prof-cal-target">Calorie Burn Target (kcal)</label>
+                <input type="number" id="prof-cal-target" class="form-control" step="50" required />
+              </div>
+              <div class="form-group">
+                <label for="prof-min-target">Exercise Time Target (mins)</label>
+                <input type="number" id="prof-min-target" class="form-control" step="5" required />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label for="prof-step-target">Daily Step Target</label>
+                <input type="number" id="prof-step-target" class="form-control" step="500" required />
+              </div>
+              <div class="form-group">
+                <label for="prof-water-target">Hydration Target (ml)</label>
+                <input type="number" id="prof-water-target" class="form-control" step="100" required />
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">
+              <i data-lucide="save"></i> Save Profile & Targets
+            </button>
+          </form>
+        </div>
+
+        <!-- Data Management & Backups Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">
+                <i data-lucide="database"></i>
+                Data Storage & Backup
+              </h3>
+              <p class="card-subtitle">Local storage persistence & portability</p>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+              All your activity history, hydration, streaks, and personal metrics are safely stored in your browser's local storage. You can export a JSON backup at any time or restore a previous snapshot.
+            </p>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+              <button class="btn btn-secondary" id="export-data-btn">
+                <i data-lucide="download"></i> Export JSON Backup
+              </button>
+
+              <button class="btn btn-secondary" id="import-data-btn">
+                <i data-lucide="upload"></i> Restore from JSON
+              </button>
+              <input type="file" id="import-file-input" accept=".json" style="display: none;" />
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 0.5rem 0;" />
+
+            <div>
+              <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;">Sample Data & Reset</h4>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                Load 7 days of realistic workouts to test out all analytics charts, or reset everything to start fresh.
+              </p>
+              <div style="display: flex; gap: 0.75rem;">
+                <button class="btn btn-secondary btn-sm" id="seed-sample-btn">
+                  <i data-lucide="sparkles"></i> Load 7-Day Demo Logs
+                </button>
+                <button class="btn btn-danger btn-sm" id="reset-data-btn">
+                  <i data-lucide="trash-2"></i> Clear All Data
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </div> <!-- /app-container -->
+
+  <!-- =====================================================================
+       ACTIVITY LOG MODAL
+       ===================================================================== -->
+  <div id="activity-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Log New Fitness Activity</h3>
+        <button class="icon-btn" id="modal-close-btn" style="width: 32px; height: 32px;">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="activity-form">
+        <div class="modal-body">
+          
+          <!-- Activity Type Presets Grid -->
+          <div class="form-group">
+            <label>Select Activity Preset</label>
+            <div class="preset-chips">
+              <div class="preset-chip selected" data-type="running">
+                <span class="preset-icon">🏃</span>
+                <span>Running</span>
+              </div>
+              <div class="preset-chip" data-type="walking">
+                <span class="preset-icon">🚶</span>
+                <span>Walking</span>
+              </div>
+              <div class="preset-chip" data-type="cycling">
+                <span class="preset-icon">🚴</span>
+                <span>Cycling</span>
+              </div>
+              <div class="preset-chip" data-type="strength">
+                <span class="preset-icon">🏋️</span>
+                <span>Strength</span>
+              </div>
+              <div class="preset-chip" data-type="hiit">
+                <span class="preset-icon">⚡</span>
+                <span>HIIT</span>
+              </div>
+              <div class="preset-chip" data-type="yoga">
+                <span class="preset-icon">🧘</span>
+                <span>Yoga</span>
+              </div>
+              <div class="preset-chip" data-type="swimming">
+                <span class="preset-icon">🏊</span>
+                <span>Swimming</span>
+              </div>
+              <div class="preset-chip" data-type="jumprope">
+                <span class="preset-icon">🪢</span>
+                <span>Jump Rope</span>
+              </div>
+              <div class="preset-chip" data-type="calisthenics">
+                <span class="preset-icon">🤸</span>
+                <span>Bodyweight</span>
+              </div>
+              <div class="preset-chip" data-type="custom">
+                <span class="preset-icon">🎯</span>
+                <span>Other</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Title -->
+          <div class="form-group">
+            <label for="act-name">Activity / Workout Name</label>
+            <input type="text" id="act-name" class="form-control" placeholder="e.g. Morning Trail Run" required />
+          </div>
+
+          <!-- Duration & Intensity -->
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="act-duration">Duration (Minutes)</label>
+              <input type="number" id="act-duration" class="form-control" value="30" min="1" max="600" required />
+            </div>
+            <div class="form-group">
+              <label for="act-intensity">Intensity Level</label>
+              <select id="act-intensity" class="form-control">
+                <option value="light">Light (0.85x)</option>
+                <option value="moderate" selected>Moderate (1.0x)</option>
+                <option value="vigorous">Vigorous (1.25x)</option>
+                <option value="extreme">Extreme / All-Out (1.5x)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Distance & Manual Calories Override -->
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="act-distance">Distance (km, optional)</label>
+              <input type="number" id="act-distance" class="form-control" step="0.01" placeholder="e.g. 5.2" />
+            </div>
+            <div class="form-group">
+              <label for="act-calories">Manual Calories (Optional)</label>
+              <input type="number" id="act-calories" class="form-control" placeholder="Leave empty for auto-MET" />
+            </div>
+          </div>
+
+          <!-- Smart Calorie Preview Banner -->
+          <div class="calorie-estimate-banner">
+            <div>
+              <div class="estimate-label">MET Smart Calorie Estimate:</div>
+              <span style="font-size: 0.75rem; color: var(--text-secondary);">Calculated from body weight + exercise intensity</span>
+            </div>
+            <div class="estimate-val" id="cal-preview-val">~220 kcal</div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-glow">
+            <i data-lucide="check"></i> Save Workout
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- App Bootstrap JS -->
+  <script src="js/bundle.js"></script>
+</body>
+</html>
